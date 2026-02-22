@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>OAU CBT Simulator - Secure Mode</title>
+    <style>
+      :root {
+        --primary: #e11d48;
+        --bg: #0f172a;
+        --card: #1e293b;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        background: var(--bg);
+        color: white;
+        display: flex;
+        justify-content: center;
+        padding: 20px;
+        margin: 0;
+        user-select: none;
+      }
+      .container {
+        width: 95%;
+        max-width: 900px;
+        background: var(--card);
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Setup Screen */
+      #setupScreen {
+        text-align: center;
+        animation: fadeIn 0.5s;
+      }
+      .input-group {
+        margin: 20px 0;
+        text-align: left;
+        max-width: 320px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      label {
+        font-size: 0.9rem;
+        color: #94a3b8;
+      }
+      input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 6px;
+        border: 2px solid #334155;
+        margin-top: 8px;
+        font-size: 16px;
+        background: #0f172a;
+        color: white;
+        outline: none;
+      }
+      input:focus {
+        border-color: var(--primary);
+      }
+      .limit-note {
+        font-size: 0.75rem;
+        color: #e11d48;
+        margin-top: 4px;
+        display: block;
+      }
+
+      /* Exam Elements */
+      #examArea {
+        display: none;
+      }
+      h2 {
+        text-align: center;
+        color: var(--primary);
+        margin-top: 0;
+      }
+      #timer {
+        text-align: center;
+        font-size: 26px;
+        margin: 15px;
+        color: #22c55e;
+        font-weight: bold;
+        font-family: monospace;
+      }
+
+      .option {
+        display: block;
+        background: var(--bg);
+        margin: 10px 0;
+        padding: 12px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: 0.2s;
+      }
+      .selected {
+        background: #334155;
+        border-color: var(--primary);
+      }
+      .correct {
+        background: #064e3b !important;
+        border-color: #22c55e !important;
+        color: #adfaad;
+      }
+      .wrong {
+        background: #7f1d1d !important;
+        border-color: #ef4444 !important;
+        color: #fca5a5;
+      }
+
+      .palette {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 6px;
+        margin: 20px 0;
+        max-height: 150px;
+        overflow-y: auto;
+        padding: 5px;
+      }
+      .palette button {
+        padding: 8px 2px;
+        border: none;
+        cursor: pointer;
+        background: #475569;
+        color: white;
+        border-radius: 4px;
+      }
+      .palette-correct {
+        background: #22c55e !important;
+      }
+      .palette-wrong {
+        background: #e11d48 !important;
+      }
+      .current {
+        background: var(--primary) !important;
+        outline: 2px solid white;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      button.btn {
+        flex: 1;
+        padding: 15px;
+        font-weight: bold;
+        cursor: pointer;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        text-transform: uppercase;
+      }
+      .btn-start {
+        background: #22c55e;
+        width: 100%;
+      }
+      .prev {
+        background: #64748b;
+      }
+      .next {
+        background: #2563eb;
+      }
+      .submit {
+        background: var(--primary);
+      }
+
+      #resultBanner {
+        display: none;
+        text-align: center;
+        background: #334155;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 2px solid #2563eb;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body oncontextmenu="return false;">
+    <div class="container">
+      <div id="setupScreen">
+        <h2>EXAM CONFIGURATION</h2>
+        <p>Pool Size: <span id="poolSize">0</span> Questions</p>
+
+        <div class="input-group">
+          <label>Number of Questions:</label>
+          <input type="number" id="userQty" value="40" min="1" max="100" />
+          <span class="limit-note">* Maximum allowed: 100</span>
+        </div>
+
+        <div class="input-group">
+          <label>Time Limit (Minutes):</label>
+          <input type="number" id="userTime" value="60" min="1" max="60" />
+          <span class="limit-note">* Maximum allowed: 60</span>
+        </div>
+
+        <button class="btn btn-start" onclick="startExam()">
+          START EXAMINATION
+        </button>
+      </div>
+
+      <div id="examArea">
+        <h2 id="examTitle">OAU COS 101 CBT</h2>
+        <div id="resultBanner">
+          <h1 id="scoreDisplay"></h1>
+          <p id="percentDisplay"></p>
+          <button class="btn next" onclick="location.reload()">
+            RETAKE NEW EXAM
+          </button>
+        </div>
+        <div id="timer">60:00</div>
+        <div id="palette" class="palette"></div>
+        <div id="questionBox"></div>
+        <div class="controls">
+          <button class="btn prev" onclick="prevQ()">PREVIOUS</button>
+          <button class="btn next" onclick="nextQ()">NEXT</button>
+          <button id="submitBtn" class="btn submit" onclick="submitExam()">
+            SUBMIT
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const MAX_QS = 100;
+      const MAX_TIME = 60;
+
+      const QUESTION_POOL = [
+        {
+          q: "Who is credited as the principal originator of the programmable computing machine concept?",
+          o: [
+            "Alan Turing",
+            "Charles Babbage",
+            "John von Neumann",
+            "Steve Jobs",
+          ],
+          a: "Charles Babbage",
+        },
+        {
+          q: "What do we call the primary chip responsible for executing program instructions?",
+          o: [
+            "Graphics Processing Unit (GPU)",
+            "Central Processing Unit (CPU)",
+            "Memory Management Unit (MMU)",
+            "Power Supply Unit (PSU)",
+          ],
+          a: "Central Processing Unit (CPU)",
+        },
+        {
+          q: "A display technology that emits light when an electric current passes through semiconductor diodes is called what?",
+          o: [
+            "Liquid Crystal Display (LCD)",
+            "Light-Emitting Diode (LED)",
+            "Cathode Ray Tube (CRT)",
+            "Plasma Display Panel (PDP)",
+          ],
+          a: "Light-Emitting Diode (LED)",
+        },
+        {
+          q: "Which display technology uses a liquid crystal solution sandwiched between panels, requiring a backlight?",
+          o: ["OLED", "LCD", "LED (as a direct display)", "CRT"],
+          a: "LCD",
+        },
+        {
+          q: "What is the primary volatile memory that temporarily holds data the processor is actively using?",
+          o: [
+            "Read-Only Memory (ROM)",
+            "Random Access Memory (RAM)",
+            "Hard Disk Drive (HDD)",
+            "Solid-State Drive (SSD)",
+          ],
+          a: "Random Access Memory (RAM)",
+        },
+        {
+          q: "A portable, polycarbonate plastic disc that stores digital data read by a laser is commonly known as what?",
+          o: [
+            "Digital Video Disc",
+            "Compact Disc",
+            "Blu-ray Disc",
+            "Floppy Disk",
+          ],
+          a: "Compact Disc",
+        },
+        {
+          q: "An optical disc format with greater storage capacity than a CD, commonly used for movies and data, is called what?",
+          o: [
+            "Digital Versatile Disc",
+            "MiniDisc",
+            "LaserDisc",
+            "Blu-ray Disc",
+          ],
+          a: "Digital Versatile Disc",
+        },
+        {
+          q: "What technology is used by banks to automatically read account numbers printed in special magnetic ink on checks?",
+          o: [
+            "Optical Character Recognition (OCR)",
+            "Magnetic Ink Character Recognition",
+            "Barcode Scanning",
+            "Radio-frequency identification (RFID)",
+          ],
+          a: "Magnetic Ink Character Recognition",
+        },
+        {
+          q: "A telecommunications network that extends over a large geographic distance, such as across countries, is classified as what?",
+          o: [
+            "Personal Area Network (PAN)",
+            "Local Area Network (LAN)",
+            "Metropolitan Area Network (MAN)",
+            "Wide Area Network (WAN)",
+          ],
+          a: "Wide Area Network (WAN)",
+        },
+        {
+          q: "Who is the inventor of the computer pointing device we now call the 'mouse'?",
+          o: [
+            "Steve Jobs",
+            "Bill English",
+            "Douglas Engelbart",
+            "Tim Berners-Lee",
+          ],
+          a: "Douglas Engelbart",
+        },
+        {
+          q: "Which type of computer memory retains its data permanently, even when the power is turned off?",
+          o: [
+            "Dynamic RAM (DRAM)",
+            "Static RAM (SRAM)",
+            "Read-Only Memory (ROM)",
+            "Cache Memory",
+          ],
+          a: "Read-Only Memory (ROM)",
+        },
+        {
+          q: "Memory that is factory-written and generally cannot be modified by the user under normal operation is known as?",
+          o: [
+            "Random Access Memory",
+            "Read-Only Memory",
+            "Virtual Memory",
+            "Flash Memory",
+          ],
+          a: "Read-Only Memory",
+        },
+        {
+          q: "What is the name for software technology that converts images of typed or printed text into machine-encoded text?",
+          o: [
+            "Magnetic Ink Character Recognition (MICR)",
+            "Optical Mark Recognition (OMR)",
+            "Optical Character Recognition (OCR)",
+            "Intelligent Character Recognition (ICR)",
+          ],
+          a: "Optical Character Recognition (OCR)",
+        },
+        {
+          q: "What is the technical term for the unique address used to locate a resource on the World Wide Web?",
+          o: [
+            "Universal Resource Locator",
+            "Uniform Resource Locator",
+            "Unified Reference Link",
+            "Universal Reference Locator",
+          ],
+          a: "Uniform Resource Locator",
+        },
+        {
+          q: "Which of the following is NOT a programming or scripting language?",
+          o: ["Java", "Python", "FAST", "JavaScript"],
+          a: "FAST",
+        },
+        {
+          q: "What is the alternative name for a computer screen?",
+          o: [
+            "Central Processing Unit",
+            "Visual Display Unit",
+            "Graphical Processing Unit",
+            "Arithmetic Logic Unit",
+          ],
+          a: "Visual Display Unit",
+        },
+        {
+          q: "Arrange these units of digital information from smallest to largest:",
+          o: [
+            "Megabyte, Kilobyte, Gigabyte, Terabyte",
+            "Kilobyte, Megabyte, Gigabyte, Terabyte",
+            "Terabyte, Gigabyte, Megabyte, Kilobyte",
+            "Kilobyte, Gigabyte, Megabyte, Terabyte",
+          ],
+          a: "Kilobyte, Megabyte, Gigabyte, Terabyte",
+        },
+        {
+          q: "Which optical disc format has a significantly higher storage capacity than a standard DVD?",
+          o: ["CD-ROM", "HD DVD", "Blu-ray Disc", "DVD-RAM"],
+          a: "Blu-ray Disc",
+        },
+        {
+          q: "A group of 8 binary digits (bits) is collectively known as a what?",
+          o: ["Nibble", "Byte", "Word", "Kilobyte"],
+          a: "Byte",
+        },
+        {
+          q: "Output that exists in a temporary, intangible digital form (like on a screen) is referred to as what?",
+          o: ["Hard Copy", "Physical Copy", "Soft Copy", "Permanent Copy"],
+          a: "Soft Copy",
+        },
+        {
+          q: "What is a multi-purpose computer whose size, capabilities, and price make it feasible for individual use?",
+          o: ["Mainframe", "Personal Computer", "Server", "Supercomputer"],
+          a: "Personal Computer",
+        },
+        {
+          q: "Metaphorically, the CPU is often called the _____ of the computer.",
+          o: ["Heart", "Brain", "Nervous System", "Skeleton"],
+          a: "Brain",
+        },
+        {
+          q: "What class of computer is engineered to solve the most complex computational problems at extremely high speeds?",
+          o: [
+            "Minicomputer",
+            "Workstation",
+            "Supercomputer",
+            "Microcontroller",
+          ],
+          a: "Supercomputer",
+        },
+        {
+          q: "Which device below is NOT used to input data or commands into a computer?",
+          o: ["Scanner", "Microphone", "Monitor", "Joystick"],
+          a: "Monitor",
+        },
+        {
+          q: "In the acronym MICR, what does the letter 'C' represent?",
+          o: ["Code", "Character", "Computer", "Control"],
+          a: "Character",
+        },
+        {
+          q: "First-generation computers (1940s-1950s) were built using which bulky, fragile electronic component?",
+          o: [
+            "Diodes",
+            "Integrated Circuits",
+            "Vacuum Tubes",
+            "Microprocessors",
+          ],
+          a: "Vacuum Tubes",
+        },
+        {
+          q: "Second-generation computers (late 1950s-1960s) saw the replacement of vacuum tubes with what smaller, more reliable component?",
+          o: ["Diodes", "Transistors", "Microchips", "Capacitors"],
+          a: "Transistors",
+        },
+        {
+          q: "The third generation of computers was defined by the invention of the what, which packed multiple transistors onto a single silicon chip?",
+          o: [
+            "Vacuum Tube Array",
+            "Printed Circuit Board",
+            "Integrated Circuit",
+            "Magnetic Core Memory",
+          ],
+          a: "Integrated Circuit",
+        },
+        {
+          q: "Fourth-generation computers (1970s-present) are characterized by the development of the what, which put an entire CPU on a single chip?",
+          o: [
+            "Very Large Scale Integration (VLSI)",
+            "Microprocessor",
+            "Central Processing Unit",
+            "Arithmetic Logic Unit",
+          ],
+          a: "Microprocessor",
+        },
+        {
+          q: "What was the bulky, glass-screen display technology used in early televisions and computer monitors called?",
+          o: [
+            "Liquid Crystal Display",
+            "Light Emitting Diode",
+            "Plasma Display",
+            "Cathode Ray Tube",
+          ],
+          a: "Cathode Ray Tube",
+        },
+        {
+          q: "In a typical shared office network, which of the following hardware components is usually NOT shared among multiple users?",
+          o: ["Printer", "File Server", "Mouse", "Internet Router"],
+          a: "Mouse",
+        },
+        {
+          q: "What is the name of the primary printed circuit board (PCB) that holds and connects all crucial components of a computer?",
+          o: ["Daughterboard", "Motherboard", "Expansion Board", "Backplane"],
+          a: "Motherboard",
+        },
+        {
+          q: "Which category of computer is typically the smallest in physical size among the options below?",
+          o: ["Mainframe", "Minicomputer", "Microcomputer", "Supercomputer"],
+          a: "Microcomputer",
+        },
+        {
+          q: "What is the two-symbol numerical system (0 and 1) that forms the basis of all digital computer operations?",
+          o: [
+            "Decimal System",
+            "Binary System",
+            "Hexadecimal System",
+            "Octal System",
+          ],
+          a: "Binary System",
+        },
+        {
+          q: "A personal computer is a specific type of what broader category of computers?",
+          o: ["Supercomputer", "Mainframe", "Microcomputer", "Minicomputer"],
+          a: "Microcomputer",
+        },
+        {
+          q: "The Linux distribution named 'Ubuntu' is primarily what type of software?",
+          o: [
+            "A Word Processor",
+            "An Operating System",
+            "A Web Browser",
+            "An Antivirus Program",
+          ],
+          a: "An Operating System",
+        },
+        {
+          q: "Computers like Frontier and Fugaku, which perform quadrillions of calculations per second, are classified as what?",
+          o: [
+            "Embedded Systems",
+            "Quantum Computers",
+            "High-Performance Computing Clusters",
+            "Supercomputers",
+          ],
+          a: "Supercomputers",
+        },
+        {
+          q: "Computers that provide data, resources, or services to other computers on a network are called what?",
+          o: ["Clients", "Terminals", "Servers", "Peers"],
+          a: "Servers",
+        },
+        {
+          q: "The most fundamental difference between Apple Mac computers and Windows PCs lies in their what?",
+          o: [
+            "Monitor Technology",
+            "Keyboard Layout",
+            "Core System Software",
+            "Mouse Design",
+          ],
+          a: "Core System Software",
+        },
+        {
+          q: "The combination of a computer’s hardware architecture and its core operating system defines its what?",
+          o: ["User Interface", "Platform", "Form Factor", "Peripheral Suite"],
+          a: "Platform",
+        },
+        {
+          q: "On which component are the CPU and the main memory modules physically mounted and electrically connected?",
+          o: [
+            "Power Supply",
+            "Graphics Card",
+            "System Board",
+            "Hard Drive Cage",
+          ],
+          a: "System Board",
+        },
+
+        {
+          q: "Software like word processors, spreadsheets, and web browsers—tools that help users perform specific tasks—are collectively known as what?",
+          o: [
+            "System Software",
+            "Utility Software",
+            "Application Software",
+            "Firmware",
+          ],
+          a: "Application Software",
+        },
+        { q: "Which of the following devices converts physical documents or photographs into digital image files?", o: ["Plotter", "Scanner", "Projector", "Speaker"], a: "Scanner" },
+{ q: "The tangible, physical components of a computer system—the parts you can see and touch—are collectively referred to as what?", o: ["Software", "Firmware", "Hardware", "Shareware"], a: "Hardware" },
+{ q: "A unit of digital information storage that is roughly equal to one million bytes is called a what?", o: ["Kilobyte", "Gigabyte", "Megabyte", "Terabyte"], a: "Megabyte" },
+{ q: "A unit of digital information storage that is roughly equal to one billion bytes is called a what?", o: ["Kilobyte", "Gigabyte", "Megabyte", "Terabyte"], a: "Gigabyte" },
+{ q: "The term 'bit,' the most basic unit of information in computing, is a contraction of what two-word phrase?", o: ["Basic Digit", "Binary Digit", "Byte Unit", "Digital Unit"], a: "Binary Digit" },
+{ q: "At their most fundamental level, computers manipulate and process what type of data?", o: ["Text", "Images", "Sounds", "Numerical Values"], a: "Numerical Values" },
+{ q: "What is the native, low-level language consisting of only 0s and 1s that a computer’s processor directly understands?", o: ["Assembly Language", "Machine Language", "High-Level Language", "Scripting Language"], a: "Machine Language" },
+{ q: "To 'gather data' in computing means to allow users to do what?", o: ["Process information", "Output results", "Input raw facts", "Store files permanently"], a: "Input raw facts" },
+{ q: "What is the name for the entire sequence of operations a computer performs to convert raw input data into useful output?", o: ["Storage", "Communication", "Data Manipulation Cycle", "Boot-up"], a: "Data Manipulation Cycle" },
+
+{ q: "Data that has been processed, organized, and structured to convey meaning, relevance, and purpose is called what?", o: ["Raw Data", "Information", "Binary Stream", "Metadata"], a: "Information" },
+{ q: "All of the following are examples of real cybersecurity threats EXCEPT:", o: ["Software that secretly records your keystrokes", "A program that encrypts your files and demands ransom", "Unsolicited commercial email advertisements", "A fraudulent email pretending to be from your bank"], a: "Unsolicited commercial email advertisements" },
+{ q: "The quantity of data a storage device can hold is typically measured in units such as what?", o: ["Hertz (Hz)", "Bytes (B, KB, MB, GB…)", "Watts (W)", "Pixels (px)"], a: "Bytes (B, KB, MB, GB…)" },
+{ q: "The collection of all physical, touchable parts that make up a computer system is known as its what?", o: ["Software Suite", "Program Library", "Physical Components", "Operating Environment"], a: "Physical Components" },
+{ q: "Which of the following is NOT an inherent characteristic of a basic, general-purpose computer?", o: ["High Processing Speed", "Ability to Store Information", "Genuine Independent Intelligence", "Accuracy in Calculation"], a: "Genuine Independent Intelligence" },
+{ q: "Which of the following is NOT a physical component of a computer system?", o: ["A program that scans for malicious software", "The circuit board that houses the CPU", "The device that displays visual output", "The component that stores data persistently"], a: "A program that scans for malicious software" },
+{ q: "Large, centralized computers from the early era often processed jobs in what mode, collecting all input before running a batch of programs?", o: ["Real-time Processing", "Time-sharing Processing", "Batch Processing", "Online Processing"], a: "Batch Processing" },
+{ q: "What does the video compression standard 'MPEG' stand for?", o: ["Moving Picture Experts Group", "Media Programming Experts Group", "Multi-Format Picture Encoding Guide", "Motion Picture Encoding Graphics"], a: "Moving Picture Experts Group" },
+{ q: "A computer is fundamentally defined as an what?", o: ["Analog calculating device", "Electronic data processing device", "Mechanical adding machine", "Electrical switching unit"], a: "Electronic data processing device" },
+{ q: "Which type of primary memory allows the CPU to both read data from and write data to it during normal operation?", o: ["Read-Only Memory (ROM)", "Random Access Memory (RAM)", "Programmable Read-Only Memory (PROM)", "Cache Memory"], a: "Random Access Memory (RAM)" },
+{ q: "The physical, printed version of computer output—such as text on paper—is commonly called a what?", o: ["Digital Copy", "Temporary Copy", "Hard Copy", "Screen Copy"], a: "Hard Copy" },
+{ q: "What general term describes any peripheral used to send data or commands into a computer for processing?", o: ["Output Mechanism", "Data Entry Tool", "Storage Medium", "Communication Port"], a: "Data Entry Tool" },
+{ q: "A display screen that can detect the presence and location of a touch within its area is called a what?", o: ["Gesture Screen", "Interactive Display", "Touch-Sensitive Screen", "Pressure Panel"], a: "Touch-Sensitive Screen" },
+{ q: "Software designed to help users accomplish specific, real-world tasks is categorized as what?", o: ["System Software", "Task-Oriented Software", "Development Software", "Middleware"], a: "Task-Oriented Software" },
+{ q: "What is the one type of programming language that is directly executable by all computer hardware without any translation?", o: ["Assembly Language", "High-Level Language", "The computer’s own native binary code", "Scripting Language"], a: "The computer’s own native binary code" },
+{ q: "What is the common name for the system of exchanging digital messages via a network?", o: ["Electronic Messaging", "Digital Post", "Instant Messaging", "Network Note"], a: "Electronic Messaging" },
+{ q: "In the early days of the web, which Microsoft program was a dominant tool for accessing websites?", o: ["Netscape Navigator", "Internet Explorer", "Microsoft Edge", "Outlook Express"], a: "Internet Explorer" },
+{ q: "The initial process when a computer is powered on, where it loads the essential parts of the operating system into memory, is called what?", o: ["Logging In", "Starting Up", "Initializing", "Configuring"], a: "Initializing" },
+{ q: "On Windows systems, what does the file extension '.exe' indicate about a file?", o: ["It is an Excel spreadsheet", "It is a text document", "It is a program that can be run", "It is a compressed archive"], a: "It is a program that can be run" },
+{ q: "Which early stored-program computer, completed in 1949, is considered one of the first practical implementations of this concept?", o: ["ENIAC", "EDSAC", "UNIVAC I", "Colossus"], a: "EDSAC" },
+{ q: "Who is considered the foundational theorist of computer science and artificial intelligence?", o: ["John von Neumann", "Grace Hopper", "Alan Turing", "Charles Babbage"], a: "Alan Turing" },
+{ q: "Who developed the Altair 8800, the microcomputer kit that sparked the home computer revolution?", o: ["Steve Wozniak", "Bill Gates", "Ed Roberts", "Paul Allen"], a: "Ed Roberts" },
+{ q: "A CPU fundamentally contains which two key subunits?", o: ["Memory Unit and Control Unit", "Control Unit and Calculation Unit", "Input Unit and Output Unit", "Storage Unit and Logic Unit"], a: "Control Unit and Calculation Unit" },
+
+{ q: "What device is essential for a computer to connect to the internet over a standard telephone line?", o: ["Router", "Network Interface Card (NIC)", "Modulator-Demodulator", "Switch"], a: "Modulator-Demodulator" },
+{ q: "What is a 'light pen' in the context of computer hardware?", o: ["A stylus that emits light", "A light-sensitive input device used to point at a CRT screen", "A pen-shaped flashlight", "A laser pointer"], a: "A light-sensitive input device used to point at a CRT screen" },
+{ q: "The acronym CD-ROM stands for what?", o: ["Compact Data - Read Only Memory", "Computer Disk – Random Operation Mode", "Compact Disc – Read-Only Memory", "Creative Data – Optical Memory"], a: "Compact Disc – Read-Only Memory" },
+{ q: "Who is the father of Computers?", o: ["James Gosling", "Charles Babbage", "Dennis Ritchie", "Bjarne Stroustrup"], a: "Charles Babbage" },
+{ q: "Which of the following is the correct abbreviation of COMPUTER?", o: ["Commonly Occupied Machines Used in Technical and Educational Research", "Commonly Operated Machines Used in Technical and Environmental Research", "Commonly Oriented Machines Used in Technical and Educational Research", "Commonly Operated Machines Used in Technical and Educational Research"], a: "Commonly Operated Machines Used in Technical and Educational Research" },
+{ q: "Which of the following is the correct definition of Computer?", o: ["Computer is a machine or device that can be programmed to perform arithmetical or logic operation sequences automatically", "Computer understands only binary language which is written in the form of 0s & 1s", "Computer is a programmable electronic device that stores, retrieves, and processes the data", "All of the mentioned"], a: "All of the mentioned" },
+{ q: "What is the full form of CPU?", o: ["Computer Processing Unit", "Computer Principle Unit", "Central Processing Unit", "Control Processing Unit"], a: "Central Processing Unit" },
+{ q: "Which of the following language does the computer understand?", o: ["Computer understands only C Language", "Computer understands only Assembly Language", "Computer understands only Binary Language", "Computer understands only BASIC"], a: "Computer understands only Binary Language" },
+{ q: "Which of the following computer language is written in binary codes only?", o: ["pascal", "machine language", "C", "C#"], a: "machine language" },
+{ q: "Which of the following is the brain of the computer?", o: ["Central Processing Unit", "Memory", "Arithmetic and Logic unit", "Control unit"], a: "Central Processing Unit" },
+{ q: "Which of the following is not a characteristic of a computer?", o: ["Versatility", "Accuracy", "Diligence", "I.Q."], a: "I.Q." },
+{ q: "Which of the following is the smallest unit of data in a computer?", o: ["Bit", "KB", "Nibble", "Byte"], a: "Bit" },
+
+{ q: "Which of the following unit is responsible for converting the data received from the user into a computer understandable format?", o: ["Output Unit", "Input Unit", "Memory Unit", "Arithmetic & Logic Unit"], a: "Input Unit" },
+{ q: "Which of the following monitor looks like a television and are normally used with non-portable computer systems?", o: ["LED", "LCD", "CRT", "Flat Panel Monitors"], a: "CRT" },
+{ q: "Which of the following is not a type of computer code?", o: ["EDIC", "ASCII", "BCD", "EBCDIC"], a: "EDIC" },
+{ q: "Which of the following part of a processor contains the hardware necessary to perform all the operations required by a computer?", o: ["Controller", "Registers", "Cache", "Data path"], a: "Data path" },
+{ q: "Which of the following is designed to control the operations of a computer?", o: ["User", "Application Software", "System Software", "Utility Software"], a: "System Software" },
+{ q: "Which of the following device use positional notation to represent a decimal number?", o: ["Pascaline", "Abacus", "Computer", "Calculator"], a: "Abacus" },
+{ q: "Which of the following is used in EBCDIC?", o: ["Super Computers", "Mainframes", "Machine Codes", "Programming"], a: "Mainframes" },
+{ q: "Which of the following are physical devices of a computer?", o: ["Hardware", "Software", "System Software", "Package"], a: "Hardware" },
+{ q: "Which of the following defines the assigned ordering among the characters used by the computer?", o: ["Accumulation", "Sorting", "Collating Sequence", "Unicode"], a: "Collating Sequence" },
+{ q: "Which of the following storage is a system where a robotic arm will connect or disconnect off-line mass storage media according to the computer operating system demands?", o: ["Magnetic", "Secondary", "Virtual", "Tertiary"], a: "Tertiary" },
+{ q: "Which of the following is known as the interval between the instant a computer makes a request for the transfer of data from a disk system to the primary storage and the instance the operation is completed?", o: ["Disk utilization time", "Drive utilization time", "Disk access time", "Disk arrival time"], a: "Disk access time" },
+{ q: "Which of the following devices provides the communication between a computer and the outer world?", o: ["Compact", "I/O", "Drivers", "Storage"], a: "I/O" },
+{ q: "Which of the following are the input devices that enable direct data entry into a computer system from source documents?", o: ["System Access devices", "Data acquiring devices", "Data retrieving devices", "Data Scanning devices"], a: "Data Scanning devices" },
+{ q: "Which of the following is the device used for converting maps, pictures, and drawings into digital form for storage in computers?", o: ["Image Scanner", "Digitizer", "MICR", "Scanner"], a: "Digitizer" },
+{ q: "Which of the following can access the server?", o: ["Web Client", "User", "Web Browser", "Web Server"], a: "Web Client" },
+{ q: "Which of the following is known as the language made up of binary-coded instructions?", o: ["High level", "BASIC", "C", "Machine"], a: "Machine" },
+{ q: "Which of the following package allows individuals to use personal computers for storing and retrieving their personal information?", o: ["Personal assistance package", "Graphics package", "Spreadsheet package", "Animation package"], a: "Personal assistance package" },
+{ q: "Which of the following is created when a user opens an account in the computer system?", o: ["SFD", "MFD", "Subdirectory", "RFD"], a: "Subdirectory" },
+{ q: "Which of the following is a technique that marked the beginning of computer communications?", o: ["User Environment", "Batch Environment", "Time Sharing", "Message passing"], a: "Time Sharing" },
+{ q: "Which of the following is a type of technique in which dumb terminals are connected to a central computer system?", o: ["Time Sharing", "Message passing", "Batch environment", "User environment"], a: "Time Sharing" },
+{ q: "Which of the following service allows a user to log in to another computer somewhere on the Internet?", o: ["e-mail", "UseNet", "Telnet", "FTP"], a: "Telnet" },
+{ q: "Which of the following is not a type of computer on the basis of operation?", o: ["Digital", "Analog", "Hybrid", "Remote"], a: "Remote" },
+
+{ q: "Which of the following type of computer is mostly used for automatic operations?", o: ["analog", "digital", "hybrid", "remote"], a: "hybrid" },
+{ q: "Which of the following invention gave birth to the much cheaper microcomputers?", o: ["PDAs", "Microprocessors", "Microcomputers", "Mainframes"], a: "Microprocessors" },
+{ q: "Which of the following computers are lower than mainframe computers in terms of speed and storage capacity?", o: ["Mainframes", "Hybrid", "Mini", "Super"], a: "Mini" },
+{ q: "Which of the following is the first neural network computer?", o: ["AN", "AM", "RFD", "SNARC"], a: "SNARC" },
+{ q: "Which unit is responsible for converting the data received from the user into a computer understandable format?", o: ["Memory Unit", "Arithmetic & Logic Unit", "Input Unit", "Output Unit"], a: "Input Unit" },
+{ q: "The only language which the computer understands is ______________", o: ["Assembly Language", "Binary Language", "BASIC", "C Language"], a: "Binary Language" },
+{ q: "The smallest unit of data in computer is ________________", o: ["Byte", "Nibble", "Bit", "KB"], a: "Bit" },
+{ q: "One nibble is equivalent to how many bits?", o: ["2", "4", "8", "1"], a: "4" },
+
+{ q: "Which of the following describes the correct format of an input instruction?", o: ["IN 82", "INPUT 82", "INP 82", "82 INP"], a: "IN 82" },
+{ q: "The input machine which originated in the United States around 1880s is a ___________", o: ["Mouse", "Joystick", "Keyboard", "Bar Code Reader"], a: "Keyboard" },
+{ q: "What does the COMPUTER stand for?", o: ["Commonly Operated Machines Used in Technical and Educational Research", "Commonly Occupied Machines Used in Technical and Educational Research", "Commonly Operated Machines Used in Technical and Environmental Research", "Commonly Oriented Machines Used in Technical and Educational Research"], a: "Commonly Operated Machines Used in Technical and Educational Research" },
+{ q: "1 yottabyte = ______________", o: ["1024 TB", "1024 EB", "1024 ZB", "1024 PB"], a: "1024 ZB" },
+{ q: "Which of the following is not a function of the Input Unit?", o: ["It reads instructions and data from the outside world", "It converts the data into computer acceptable format", "It makes the data into user understandable format", "It supplies the data and instructions to the computer for further processing"], a: "It makes the data into user understandable format" },
+
+{ q: "Label the parts 1 and 2 in a standard computer block diagram:", o: ["1.ALU 2. MU", "1.Output unit 2.Input Unit", "1.MU 2. ALU", "1.Input Unit 2.Output Unit"], a: "1.Input Unit 2.Output Unit" },
+{ q: "The process of producing useful information for the user is called ___________", o: ["Controlling", "Outputting", "Inputting", "Processing"], a: "Outputting" },
+{ q: "The output unit converts the data entered by the user into computer understandable form.", o: ["True", "False"], a: "False" },
+{ q: "VDU stands for __________", o: ["Virtual Display Unit", "Visual Display Unit", "Virtual Detection Unit", "Visual Detection Unit"], a: "Visual Display Unit" },
+{ q: "What does SVGA stand for?", o: ["Standard Visual Graphics Array", "Super Visual Graphics Array", "Standard Video Graphics Array", "Super Video Graphics Array"], a: "Super Video Graphics Array" },
+{ q: "The devices that used to give single or multiple colored images and drawings are ____________", o: ["Monitors", "Printers", "Plotters", "VDUs"], a: "Plotters" },
+
+{ q: "A special request originated from some device to the CPU to acquire some of its time is called ___________", o: ["Disturbance", "Attenuation", "Interrupt", "Noise"], a: "Interrupt" },
+{ q: "Line Printers that print one line at a time are _________", o: ["Laser Printers", "Inkjet Printers", "Drum Printers and Chain Printers", "Chain Printers and Inkjet Printers"], a: "Drum Printers and Chain Printers" },
+{ q: "A ___________________ monitor looks like a television and are normally used with non-portable computer systems.", o: ["CRT", "LCD", "LED", "Flat Panel Monitors"], a: "CRT" },
+{ q: "Which of the following is not a function of the Output Unit?", o: ["It produces results that can be easily understood by the user", "It accepts the results produced by the computer", "It supplies the data and instructions to the outside world", "It supplies the data and instructions to the computer for further processing"], a: "It supplies the data and instructions to the computer for further processing" },
+{ q: "PCI stands for _________", o: ["Peripheral Component Interconnect", "Partial Component Interconnect", "Peripheral Component Interaction", "Partial Component Interaction"], a: "Peripheral Component Interconnect" },
+{ q: "Components that provide internal storage to the CPU are ______", o: ["Registers", "Program Counters", "Controllers", "Internal chips"], a: "Registers" },
+{ q: "Saving data and instructions to make them readily available is the job of __________", o: ["Storage Unit", "Cache Unit", "Input Unit", "Output Unit"], a: "Storage Unit" },
+{ q: "The two basic types of memory in a computer are ________", o: ["Primary and major", "Primary and Secondary", "Minor and Major", "Main and virtual"], a: "Primary and Secondary" },
+
+{ q: "Which of the following is used to hold running program instructions?", o: ["Primary Storage", "Virtual Storage", "Internal Storage", "Minor Devices"], a: "Primary Storage" },
+{ q: "Which of the following is non-volatile storage?", o: ["Backup", "Secondary", "Primary", "Cache"], a: "Secondary" },
+{ q: "Which of the following is used in main memory?", o: ["SRAM", "DRAM", "PRAM", "DDR"], a: "DRAM" },
+{ q: "Which of the following are types of ROMs?", o: ["SROM & DROM", "PROM & EPROM", "Only one type there is no further classification", "PROM & EROM"], a: "PROM & EPROM" },
+{ q: "RAID stands for __________", o: ["Redundant array of independent disks", "Redundant array of individual disks", "Reusable Array of independent disks", "Reusable array of individual disks"], a: "Redundant array of independent disks" },
+{ q: "A non-erasable disk that stores digitized audio information is _____", o: ["CD", "CD-ROM", "DVD-R", "DVD-RW"], a: "CD" },
+{ q: "The first practical form of Random Access Memory was the __________", o: ["SSEM", "Cathode Ray Tube", "William’s Tube", "Thomas’s Tube"], a: "William’s Tube" },
+{ q: "The ‘heart’ of the processor which performs many different operations _____________", o: ["Arithmetic and logic unit", "Motherboard", "Control Unit", "Memory"], a: "Arithmetic and logic unit" },
+{ q: "ALU is the place where the actual executions of instructions take place during the processing operation.", o: ["True", "False"], a: "True" },
+{ q: "Which of the following is not a bitwise operator?", o: ["|", "^", ".", "<<"], a: "." },
+{ q: "The sign magnitude representation of -1 is __________", o: ["0001", "1110", "1000", "1001"], a: "1001" },
+{ q: "IEEE stands for ___________", o: ["Instantaneous Electrical Engineering", "Institute of Emerging Electrical Engineers", "Institute of Emerging Electronic Engineers", "Institute of Electrical and electronics engineers"], a: "Institute of Electrical and electronics engineers" },
+{ q: "The ALU gives the output of the operations and the output is stored in the ________", o: ["Memory Devices", "Registers", "Flags", "Output Unit"], a: "Registers" },
+{ q: "The process of division on memory spaces is called ______________", o: ["Paging", "Segmentation", "Bifurcation", "Dynamic Division"], a: "Segmentation" },
+{ q: "Number of bits in ALU is _________", o: ["4", "8", "16", "2"], a: "16" },
+{ q: "Which flag indicates the number of 1 bit that results from an operation?", o: ["Zero", "Parity", "Auxiliary", "Carry"], a: "Parity" },
+{ q: "The bitwise complement of 0 is ___________", o: ["00000001", "10000000", "11111111", "11111110"], a: "11111111" },
+{ q: "Which of the following is not a positional number system?", o: ["Roman Number System", "Octal Number System", "Binary Number System", "Hexadecimal Number System"], a: "Roman Number System" },
+{ q: "The value of radix in binary number system is _____________", o: ["2", "8", "10", "1"], a: "2" },
+{ q: "The binary equivalent of the decimal number 10 is __________", o: ["0010", "10", "1010", "010"], a: "1010" },
+
+{ q: "A computer language that is written in binary codes only is _____", o: ["machine language", "C", "C#", "pascal"], a: "machine language" },
+{ q: "The octal equivalent of 1100101.001010 is ______", o: ["624.12", "145.12", "154.12", "145.21"], a: "145.12" },
+{ q: "The input hexadecimal representation of 1110 is _______________", o: ["0111", "E", "15", "14"], a: "E" },
+{ q: "A bit in a computer terminology means either 0 or 1.", o: ["True", "False"], a: "True" },
+{ q: "Convert the binary equivalent 10101 to its decimal equivalent.", o: ["21", "12", "22", "31"], a: "21" },
+{ q: "Which of the following is not a binary number?", o: ["1111", "101", "11E", "000"], a: "11E" },
+{ q: "Which of the following is the correct representation of a binary number?", o: ["(124)2", "1110", "(110)2", "(000)2"], a: "(110)2" }
+
+      ];
+      
+
+      let questions = [];
+      let current = 0;
+      let answers = [];
+      let timeLeft = 0;
+      let isReviewMode = false;
+      let timerInt;
+
+      document.getElementById("poolSize").innerText = QUESTION_POOL.length;
+
+      /* --- FUNCTIONS --- */
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      function startExam() {
+        let qty = parseInt(document.getElementById("userQty").value);
+        let mins = parseInt(document.getElementById("userTime").value);
+
+        // Hard Validation Logic
+        if (isNaN(qty) || qty < 1) qty = 1;
+        if (qty > MAX_QS) qty = MAX_QS;
+        if (qty > QUESTION_POOL.length) qty = QUESTION_POOL.length;
+
+        if (isNaN(mins) || mins < 1) mins = 1;
+        if (mins > MAX_TIME) mins = MAX_TIME;
+
+        // Apply limits back to UI for transparency
+        document.getElementById("userQty").value = qty;
+        document.getElementById("userTime").value = mins;
+
+        // Initialize
+        questions = shuffle([...QUESTION_POOL]).slice(0, qty);
+        timeLeft = mins * 60;
+        answers = new Array(qty).fill(null);
+        current = 0;
+        isReviewMode = false;
+
+        document.getElementById("setupScreen").style.display = "none";
+        document.getElementById("examArea").style.display = "block";
+
+        createPalette(qty);
+        loadQuestion();
+        startTimer();
+      }
+
+      function startTimer() {
+        clearInterval(timerInt);
+        timerInt = setInterval(() => {
+          if (isReviewMode) return;
+          timeLeft--;
+          const m = Math.floor(timeLeft / 60);
+          const s = timeLeft % 60;
+          document.getElementById("timer").innerText =
+            `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+          if (timeLeft <= 0) {
+            clearInterval(timerInt);
+            submitExam(true); // Auto-submit when time is up
+          }
+        }, 1000);
+      }
+
+      function createPalette(qty) {
+        const p = document.getElementById("palette");
+        p.innerHTML = "";
+        for (let i = 0; i < qty; i++) {
+          const btn = document.createElement("button");
+          btn.innerText = i + 1;
+          btn.onclick = () => {
+            current = i;
+            loadQuestion();
+          };
+          p.appendChild(btn);
+        }
+      }
+
+      function loadQuestion() {
+        const q = questions[current];
+        let html = `<div class="question"><h3>Q${current + 1}. ${q.q}</h3>`;
+
+        q.o.forEach((opt) => {
+          let cls = "option";
+          if (isReviewMode) {
+            if (opt === q.a) cls += " correct";
+            else if (answers[current] === opt) cls += " wrong";
+          } else {
+            if (answers[current] === opt) cls += " selected";
+          }
+          const action = isReviewMode
+            ? ""
+            : `onclick="selectAnswer('${opt.replace(/'/g, "\\'")}')"`;
+          html += `<div class="${cls}" ${action}>${opt}</div>`;
+        });
+
+        document.getElementById("questionBox").innerHTML = html;
+        updatePalette();
+      }
+
+      function selectAnswer(opt) {
+        answers[current] = opt;
+        loadQuestion();
+      }
+
+      function nextQ() {
+        if (current < questions.length - 1) {
+          current++;
+          loadQuestion();
+        }
+      }
+      function prevQ() {
+        if (current > 0) {
+          current--;
+          loadQuestion();
+        }
+      }
+
+      function updatePalette() {
+        const btns = document.querySelectorAll(".palette button");
+        btns.forEach((b, i) => {
+          b.classList.remove("current", "palette-correct", "palette-wrong");
+          if (isReviewMode) {
+            if (answers[i] === questions[i].a)
+              b.classList.add("palette-correct");
+            else b.classList.add("palette-wrong");
+          }
+          if (i === current) b.classList.add("current");
+        });
+      }
+
+      function submitExam(force = false) {
+        if (!force && !confirm("Submit your exam?")) return;
+
+        isReviewMode = true;
+        clearInterval(timerInt);
+
+        let score = 0;
+        questions.forEach((q, i) => {
+          if (answers[i] === q.a) score++;
+        });
+
+        document.getElementById("timer").style.display = "none";
+        document.getElementById("submitBtn").style.display = "none";
+        document.getElementById("resultBanner").style.display = "block";
+        document.getElementById("scoreDisplay").innerText =
+          `Final Score: ${score} / ${questions.length}`;
+        document.getElementById("percentDisplay").innerText =
+          `${((score / questions.length) * 100).toFixed(1)}%`;
+
+        current = 0;
+        loadQuestion();
+      }
+    </script>
+  </body>
+</html>
