@@ -15,7 +15,8 @@
         background: var(--bg);
         color: white;
         display: flex;
-        justify-content: center;
+        flex-direction: column;
+        align-items: center;
         padding: 20px;
         margin: 0;
         user-select: none;
@@ -67,14 +68,8 @@
       }
 
       /* Exam Elements */
-      #examArea {
-        display: none;
-      }
-      h2 {
-        text-align: center;
-        color: var(--primary);
-        margin-top: 0;
-      }
+      #examArea { display: none; }
+      h2 { text-align: center; color: var(--primary); margin-top: 0; }
       #timer {
         text-align: center;
         font-size: 26px;
@@ -94,20 +89,9 @@
         border: 2px solid transparent;
         transition: 0.2s;
       }
-      .selected {
-        background: #334155;
-        border-color: var(--primary);
-      }
-      .correct {
-        background: #064e3b !important;
-        border-color: #22c55e !important;
-        color: #adfaad;
-      }
-      .wrong {
-        background: #7f1d1d !important;
-        border-color: #ef4444 !important;
-        color: #fca5a5;
-      }
+      .selected { background: #334155; border-color: var(--primary); }
+      .correct { background: #064e3b !important; border-color: #22c55e !important; color: #adfaad; }
+      .wrong { background: #7f1d1d !important; border-color: #ef4444 !important; color: #fca5a5; }
 
       .palette {
         display: grid;
@@ -126,22 +110,11 @@
         color: white;
         border-radius: 4px;
       }
-      .palette-correct {
-        background: #22c55e !important;
-      }
-      .palette-wrong {
-        background: #e11d48 !important;
-      }
-      .current {
-        background: var(--primary) !important;
-        outline: 2px solid white;
-      }
+      .palette-correct { background: #22c55e !important; }
+      .palette-wrong { background: #e11d48 !important; }
+      .current { background: var(--primary) !important; outline: 2px solid white; }
 
-      .controls {
-        display: flex;
-        gap: 10px;
-        margin-top: 20px;
-      }
+      .controls { display: flex; gap: 10px; margin-top: 20px; }
       button.btn {
         flex: 1;
         padding: 15px;
@@ -152,19 +125,10 @@
         color: white;
         text-transform: uppercase;
       }
-      .btn-start {
-        background: #22c55e;
-        width: 100%;
-      }
-      .prev {
-        background: #64748b;
-      }
-      .next {
-        background: #2563eb;
-      }
-      .submit {
-        background: var(--primary);
-      }
+      .btn-start { background: #22c55e; width: 100%; }
+      .prev { background: #64748b; }
+      .next { background: #2563eb; }
+      .submit { background: var(--primary); }
 
       #resultBanner {
         display: none;
@@ -175,14 +139,29 @@
         margin-bottom: 20px;
         border: 2px solid #2563eb;
       }
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 1;
-        }
+
+      footer {
+        text-align: center;
+        padding: 20px 0;
+        margin-top: 40px;
+        color: #94a3b8;
+        font-size: 0.9rem;
+        border-top: 1px solid #334155;
+        width: 100%;
+        max-width: 900px;
       }
+      footer a {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: bold;
+        transition: 0.3s;
+      }
+      footer a:hover {
+        color: #fb7185; /* A slightly lighter red for the hover effect */
+        text-decoration: underline;
+      }
+
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
   </head>
   <body oncontextmenu="return false;">
@@ -229,6 +208,15 @@
         </div>
       </div>
     </div>
+
+    <footer>
+      <footer>
+      <p>
+        &copy; <script>document.write(new Date().getFullYear())</script> OAU COS 101 CBT Simulator | 
+        Developed by <a href="https://www.linkedin.com/in/oreoluwapo-ajeyomi-55120834b/" target="_blank">OREOLUWAPO AJEYOMI</a>
+      </p>
+    </footer>
+    </footer>
 
     <script>
       const MAX_QS = 100;
